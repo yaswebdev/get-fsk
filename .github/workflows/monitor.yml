@@ -1,3 +1,9 @@
+name: Gmail Test
+
+on:
+  workflow_dispatch:
+
+jobs:
   test-email:
     runs-on: ubuntu-latest
 
@@ -14,4 +20,5 @@
         env:
           EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        run: python test_email.py
+        run: |
+          python test_email.py
