@@ -2,22 +2,38 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 
-username = os.environ["EMAIL_USERNAME"]
-password = os.environ["EMAIL_PASSWORD"]
+EMAIL_USERNAME = os.environ["EMAIL_USERNAME"]
+EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 
 message = MIMEText(
-    "This is a test email from your GitHub Actions Master Result Monitor."
+    """Hello!
+
+This is a TEST email from your GitHub Actions Master Result Monitor.
+
+If you received this email, Gmail SMTP is working correctly.
+
+Your Master Result Monitor can now send notifications automatically.
+"""
 )
 
 message["Subject"] = "TEST - Master Result Monitor"
-message["From"] = username
-message["To"] = username
+message["From"] = EMAIL_USERNAME
+message["To"] = EMAIL_USERNAME
 
-print("Connecting to Gmail SMTP...")
+print("Connecting to Gmail...")
 
 with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-    server.login(username, password)
-    print("Gmail authentication successful.")
-    server.sendmail(username, username, message.as_string())
+    server.login(
+        EMAIL_USERNAME,
+        EMAIL_PASSWORD
+    )
 
-print("Email sent successfully!")
+    print("Gmail login successful.")
+
+    server.sendmail(
+        EMAIL_USERNAME,
+        EMAIL_USERNAME,
+        message.as_string()
+    )
+
+print("TEST EMAIL SENT SUCCESSFULLY!")
