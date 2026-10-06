@@ -1,24 +1,53 @@
-name: Gmail Test
+name: Master Result Monitor
 
 on:
+  schedule:
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  test-email:
+  monitor:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Send test email
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Run monitor
         env:
           EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: python monitor.py
+
+      - name: Save monitoring state
         run: |
-          python test_email.py
+          if [ ! -f page_hash.txt ]; then
+            echo "page_hash.txt was not created."
+            exit 1
+          fi
+
+          git config user.name "Master Result Monitor"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add page_hash.txt
+
+          if git diff --cached --quiet; then
+            echo "No state change."
+          else
+            git commit -m "Update monitoring state"
+            git push
+          fi
