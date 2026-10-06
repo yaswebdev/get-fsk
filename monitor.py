@@ -18,10 +18,12 @@ STATE_FILE = "page_hash.txt"
 
 
 def get_page_content():
+
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "AppleWebKit/537.36 "
+            "(KHTML, like Gecko) "
             "Chrome/154.0.0.0 Safari/537.36"
         )
     }
@@ -34,22 +36,31 @@ def get_page_content():
 
     response.raise_for_status()
 
-    soup = BeautifulSoup(response.text, "html.parser")
+    soup = BeautifulSoup(
+        response.text,
+        "html.parser"
+    )
 
-    # Remove dynamic elements
-    for element in soup(["script", "style", "noscript"]):
+    for element in soup(
+        ["script", "style", "noscript"]
+    ):
         element.decompose()
 
-    return soup.get_text("\n", strip=True)
+    return soup.get_text(
+        "\n",
+        strip=True
+    )
 
 
 def calculate_hash(content):
+
     return hashlib.sha256(
         content.encode("utf-8")
     ).hexdigest()
 
 
 def send_email():
+
     message = MIMEMultipart()
 
     message["From"] = EMAIL_USERNAME
@@ -74,7 +85,11 @@ Bonne chance !
 """
 
     message.attach(
-        MIMEText(body, "plain", "utf-8")
+        MIMEText(
+            body,
+            "plain",
+            "utf-8"
+        )
     )
 
     print("Connecting to Gmail SMTP...")
@@ -105,7 +120,9 @@ def main():
 
     content = get_page_content()
 
-    current_hash = calculate_hash(content)
+    current_hash = calculate_hash(
+        content
+    )
 
     old_hash = None
 
@@ -131,11 +148,11 @@ def main():
             file.write(current_hash)
 
         print("Initial page state saved.")
-        print("No email sent on the first run.")
+        print("No email sent on first run.")
 
         return
 
-    # Page changed
+    # Change detected
     if current_hash != old_hash:
 
         print("CHANGE DETECTED!")
