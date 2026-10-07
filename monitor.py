@@ -3,6 +3,7 @@ import hashlib
 import smtplib
 import requests
 
+from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -28,11 +29,16 @@ def get_page_content():
         )
     }
 
+    print("Downloading page...")
+
     response = requests.get(
         URL,
         headers=headers,
         timeout=30
     )
+
+    print(f"HTTP status: {response.status_code}")
+    print(f"Downloaded: {len(response.text)} bytes")
 
     response.raise_for_status()
 
@@ -41,15 +47,18 @@ def get_page_content():
         "html.parser"
     )
 
-    for element in soup(
-        ["script", "style", "noscript"]
-    ):
+    # Remove elements that can change without meaning
+    for element in soup(["script", "style", "noscript"]):
         element.decompose()
 
-    return soup.get_text(
+    content = soup.get_text(
         "\n",
         strip=True
     )
+
+    print(f"Extracted text: {len(content)} characters")
+
+    return content
 
 
 def calculate_hash(content):
@@ -78,8 +87,8 @@ Consultez immédiatement la page :
 
 {URL}
 
-Une nouvelle liste de résultats, liste d'admission ou
-mise à jour importante peut avoir été publiée.
+Une nouvelle liste de résultats, une liste d'admission
+ou une autre mise à jour peut avoir été publiée.
 
 Bonne chance !
 """
@@ -96,7 +105,8 @@ Bonne chance !
 
     with smtplib.SMTP_SSL(
         "smtp.gmail.com",
-        465
+        465,
+        timeout=30
     ) as server:
 
         server.login(
@@ -115,14 +125,34 @@ Bonne chance !
 
 def main():
 
-    print("Checking FS UIT Master results...")
-    print(f"URL: {URL}")
+    print("=" * 60)
+    print("MASTER RESULT MONITOR")
+    print("=" * 60)
+
+    print(
+        "Execution time:",
+        datetime.now(timezone.utc).isoformat()
+    )
+
+    print("URL:", URL)
+
+    # --------------------------------------------------
+    # Download page
+    # --------------------------------------------------
 
     content = get_page_content()
 
-    current_hash = calculate_hash(
-        content
-    )
+    # --------------------------------------------------
+    # Calculate hash
+    # --------------------------------------------------
+
+    current_hash = calculate_hash(content)
+
+    print("Current hash:", current_hash)
+
+    # --------------------------------------------------
+    # Read previous state
+    # --------------------------------------------------
 
     old_hash = None
 
@@ -136,7 +166,16 @@ def main():
 
             old_hash = file.read().strip()
 
+        print("Previous hash:", old_hash)
+
+    else:
+
+        print("No previous state found.")
+
+    # --------------------------------------------------
     # First run
+    # --------------------------------------------------
+
     if old_hash is None:
 
         with open(
@@ -152,12 +191,32 @@ def main():
 
         return
 
+    # --------------------------------------------------
     # Change detected
+    # --------------------------------------------------
+
     if current_hash != old_hash:
 
-        print("CHANGE DETECTED!")
+        print("🚨 CHANGE DETECTED!")
 
-        send_email()
+        try:
+
+            send_email()
+
+            print("Email notification sent.")
+
+        except Exception as error:
+
+            print("❌ EMAIL ERROR:")
+            print(error)
+
+            # IMPORTANT:
+            # Do NOT update the hash if email failed.
+            # The next run will try again.
+
+            raise
+
+        # Only save the new state after successful email
 
         with open(
             STATE_FILE,
@@ -172,6 +231,8 @@ def main():
     else:
 
         print("No change detected.")
+
+    print("=" * 60)
 
 
 if __name__ == "__main__":
